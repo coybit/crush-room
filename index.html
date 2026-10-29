@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#14161e">
-<meta name="description" content="Read the walls and pillars, pick the one spot that survives when the walls close.">
+<meta name="description" content="Read the walls and pillars, pick the one spot that survives when the walls close. A new daily challenge every day.">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0}[hidden]{display:none!important}</style>
 <title>Crush Room</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -60,16 +60,43 @@ h2.safe{color:var(--safe)} h2.dead{color:var(--danger)}
 .btn:active{transform:translateY(1px)}
 .big{font-family:var(--mono);font-weight:700;font-size:28px;font-variant-numeric:tabular-nums;color:var(--text)}
 @media (prefers-reduced-motion: reduce){.btn:active{transform:none}}
+.timebar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.timebar i{display:block;height:100%;background:var(--amber);transform-origin:left center;transition:background-color .2s}
+.timebar i.low{background:var(--danger)}
+.v.low{color:var(--danger)}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line);font-size:16px;padding:12px 20px}
+.small{font-size:14px}
+.daily-box{display:grid;gap:2px;border-top:1px solid var(--line);padding-top:12px}
+.daily-box .k{color:var(--amber)}
+h2.amber{color:var(--amber)}
+.dots{display:flex;gap:6px;flex-wrap:wrap}
+.dot{flex:1 1 0;min-width:0;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;border:1px solid var(--line);color:var(--muted)}
+.big-dots .dot{height:44px;font-size:14px}
+.dot.ok{background:var(--safe);border-color:var(--safe);color:var(--ink)}
+.dot.bad{background:var(--danger);border-color:var(--danger);color:var(--ink)}
+.dot.out{background:var(--ink);color:var(--muted)}
+.share-text{margin:0;padding:10px 12px;background:var(--ink);border:1px solid var(--line);border-radius:10px;font-family:var(--mono);font-size:13px;line-height:1.5;color:var(--text);white-space:pre-wrap;word-break:break-word;user-select:all}
+.share-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.chip{display:flex;align-items:center;justify-content:center;padding:9px 4px;border-radius:8px;border:1px solid var(--line);color:var(--text);text-decoration:none;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip:hover{border-color:var(--amber)}
+.chip:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+#hitflash{position:fixed;inset:0;pointer-events:none;background:var(--danger);opacity:0}
+#hitflash.on{animation:hit .5s ease-out}
+@keyframes hit{0%{opacity:.45}100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){#hitflash.on{animation:none}}
+.how{border-top:1px solid var(--line);padding-top:12px}
+.daily-box{border-top:0;padding-top:0}
 </style>
 
 </head>
 <body>
 <div class="app">
   <div class="hud">
-    <div class="stat"><div class="k">Room</div><div class="v" id="hudRoom">1</div></div>
-    <div class="stat"><div class="k">Time</div><div class="v" id="hudTime">0.00s</div></div>
+    <div class="stat"><div class="k" id="hudRoomK">Room</div><div class="v" id="hudRoom">1</div></div>
+    <div class="stat"><div class="k">Time left</div><div class="v" id="hudTime">0.0s</div></div>
     <div class="stat"><div class="k">Score</div><div class="v" id="hudScore">0</div></div>
   </div>
+  <div class="timebar" aria-hidden="true"><i id="bar"></i></div>
   <div class="stage" id="stage"><canvas id="room" tabindex="0" aria-label="Room: tap a row, or a side of a pillar, to stand there"></canvas></div>
   <div class="prompt" id="prompt">&nbsp;</div>
 </div>
@@ -77,7 +104,15 @@ h2.safe{color:var(--safe)} h2.dead{color:var(--danger)}
 <div class="overlay" id="ovStart">
   <div class="card">
     <h1>Crush Room</h1>
-    <p>The walls on both sides are about to slide together. Pick the one spot where you won't get flattened.</p>
+    <p>The walls on both sides are about to slide together. Pick the one spot where you won't get flattened, before the clock runs out.</p>
+    <div class="daily-box">
+      <div class="k">Daily challenge <span id="dailyNo"></span></div>
+      <p id="dailyLine">5 rooms. Everyone gets the same rooms today.</p>
+    </div>
+    <button class="btn" id="btnDaily">Play today's 5 rooms</button>
+    <button class="btn ghost" id="btnEndless">Endless mode</button>
+    <p class="small" id="bestLine"></p>
+    <div class="k how">How to play</div>
     <div class="legend">
       <div><svg width="44" height="26" viewBox="0 0 44 26" aria-hidden="true"><rect x="0" y="0" width="44" height="26" fill="var(--floor)"/><rect x="0" y="0" width="14" height="26" fill="var(--wall)"/><rect x="14" y="0" width="12" height="26" fill="var(--wall-hi)"/><line x1="26" y1="0" x2="26" y2="26" stroke="var(--ink)" stroke-width="2"/></svg><span><strong>Bump-out</strong>: sticks out into the room</span></div>
       <div><svg width="44" height="26" viewBox="0 0 44 26" aria-hidden="true"><rect x="0" y="0" width="44" height="26" fill="var(--floor)"/><rect x="0" y="0" width="6" height="26" fill="var(--wall)"/><rect x="6" y="0" width="12" height="26" fill="var(--wall-lo)" opacity=".28"/><line x1="6" y1="0" x2="6" y2="26" stroke="var(--ink)" stroke-width="2"/></svg><span><strong>Recess</strong>: set back into the wall</span></div>
@@ -87,28 +122,27 @@ h2.safe{color:var(--safe)} h2.dead{color:var(--danger)}
       <li>Tap the <strong>row</strong> where you want to stand. In a row with a pillar, tap the <strong>side</strong> of the pillar you want.</li>
       <li>Both walls slide in at the same speed. A wall that hits <strong>a pillar</strong> stops right there. The other wall keeps coming until it hits a pillar too, or the stopped wall.</li>
       <li>You fill one square. You survive if at least one square of your row (or your side of the pillar) is still uncovered at the end.</li>
-      <li>Take your time, but faster picks score more. One wrong pick ends the run.</li>
+      <li>Each room has a <strong>countdown</strong>. More time left means more points. If it hits zero, the walls close on you.</li>
     </ul>
-    <p id="bestLine"></p>
-    <button class="btn" id="btnStart">Start</button>
   </div>
 </div>
 
-<div class="overlay" id="ovSafe" hidden>
+<div class="overlay" id="ovRoom" hidden>
   <div class="card">
-    <h2 class="safe">Safe!</h2>
+    <h2 id="roomTitle" class="safe">Safe!</h2>
     <div class="stats">
-      <div><div class="k">Decided in</div><div class="v" id="safeTime">0s</div></div>
-      <div><div class="k">Points</div><div class="v" id="safePts">+0</div></div>
-      <div><div class="k">Score</div><div class="v" id="safeScore">0</div></div>
+      <div><div class="k">Decided in</div><div class="v" id="roomTime">0s</div></div>
+      <div><div class="k">Points</div><div class="v" id="roomPts">+0</div></div>
+      <div><div class="k">Score</div><div class="v" id="roomScore">0</div></div>
     </div>
+    <div class="dots" id="roomDots" hidden></div>
     <button class="btn" id="btnNext">Next room</button>
   </div>
 </div>
 
 <div class="overlay" id="ovOver" hidden>
   <div class="card">
-    <h2 class="dead">Crushed</h2>
+    <h2 class="dead" id="overTitle">Crushed</h2>
     <p id="overLine"></p>
     <div><div class="k">Final time</div><div class="big" id="overTime">0.00s</div></div>
     <div class="stats">
@@ -119,33 +153,52 @@ h2.safe{color:var(--safe)} h2.dead{color:var(--danger)}
     <span class="badge" id="newBest" hidden>New best score</span>
     <div class="runs" id="runs"></div>
     <button class="btn" id="btnAgain">Play again</button>
+    <button class="btn ghost" id="btnHome1">Back to start</button>
   </div>
 </div>
 
+<div class="overlay" id="ovDaily" hidden>
+  <div class="card">
+    <h2 class="amber" id="dailyTitle">Daily #1</h2>
+    <div class="dots big-dots" id="dailyDots"></div>
+    <div class="stats">
+      <div><div class="k">Survived</div><div class="v" id="dSurvived">0/5</div></div>
+      <div><div class="k">Score</div><div class="v" id="dScore">0</div></div>
+      <div><div class="k">Time</div><div class="v" id="dTime">0s</div></div>
+    </div>
+    <pre class="share-text" id="shareText"></pre>
+    <button class="btn" id="btnShare">Share result</button>
+    <div class="share-row">
+      <a class="chip" id="shWhatsapp" target="_blank" rel="noopener">WhatsApp</a>
+      <a class="chip" id="shX" target="_blank" rel="noopener">X</a>
+      <a class="chip" id="shTelegram" target="_blank" rel="noopener">Telegram</a>
+      <a class="chip" id="shFacebook" target="_blank" rel="noopener">Facebook</a>
+    </div>
+    <p class="small" id="shareNote" aria-live="polite"></p>
+    <p class="small">Next daily in <strong id="nextDaily">--:--:--</strong></p>
+    <button class="btn ghost" id="btnHome2">Back to start</button>
+  </div>
+</div>
+<div id="hitflash" aria-hidden="true"></div>
+
 <script>
 (() => {
-const $ = s => document.querySelector(s);
-const cv = $('#room'), ctx = cv.getContext('2d');
-// Square grid. Columns 0..W-1 are the floor between the walls' flat faces; T columns of wall on each side.
-const T = 3, W = 8, U = 2 * T + W, E = 1e-9;
-const KEY = 'crushroom.v1';
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// ---- room generator (shared by the page and the node test) ----
+const W = 8, E = 1e-9;
 
-const C = {};
-const cs = getComputedStyle(document.documentElement);
-['ink','wall','wall-hi','wall-lo','floor','floor-seam','pillar','pillar-hi','amber','safe','danger'].forEach(k => C[k] = cs.getPropertyValue('--' + k).trim());
-
-const S = { level: 1, score: 0, total: 0, room: null, phase: 'start', t0: 0, choice: null, t: 0, hover: null, shake: 0, flash: 0 };
-let geo = { w: 0, h: 0, u: 0 };
-
-function loadStore() { try { return JSON.parse(localStorage.getItem(KEY)) || { best: null, runs: [] }; } catch (e) { return { best: null, runs: [] }; } }
-function saveStore(s) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} }
-const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
-const fmt = t => t.toFixed(2) + 's';
+// Seeded random numbers: the same seed gives the same sequence on every device.
+function hashStr(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+  h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909);
+  return (h ^= h >>> 16) >>> 0;
+}
+function mulberry32(a) {
+  return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
 
 // Row: L, R = wall offsets in squares (+ bump-out, - recess); p = pillar column or null.
-// Both walls move at speed 1. A wall stops when it touches a pillar; walls also stop when they meet each other.
-// Returns how far each wall travels in the end.
+// Both walls move at speed 1. A wall stops when it touches a pillar; walls also stop when they meet.
 function simulate(rows, usePillars = true) {
   let a = Infinity, b = Infinity, G0 = Infinity;
   for (const r of rows) {
@@ -156,7 +209,7 @@ function simulate(rows, usePillars = true) {
   if (a <= b) return 2 * a >= G0 ? { dL: G0 / 2, dR: G0 / 2 } : { dL: a, dR: G0 - a };
   return 2 * b >= G0 ? { dL: G0 / 2, dR: G0 / 2 } : { dL: G0 - b, dR: b };
 }
-// Every floor square you can stand on at the start, and whether it is still uncovered at the end.
+// Floor squares you can stand on at the start, and whether each is uncovered at the end.
 function buildCells(rows, s) {
   const out = [];
   rows.forEach((r, i) => {
@@ -167,37 +220,45 @@ function buildCells(rows, s) {
   });
   return out;
 }
-
-// A spot is what the player picks: a whole row, or one side of the pillar in a pillar row.
-// It is safe if at least one of its squares is still uncovered at the end.
-function buildSpots(rows, cells) {
-  const map = new Map();
-  cells.forEach(c => {
-    const r = rows[c.row], side = r.p == null ? null : (c.col < r.p ? 'L' : 'R'), k = c.row + ':' + side;
-    if (!map.has(k)) map.set(k, { row: c.row, side, cells: [] });
-    map.get(k).cells.push(c);
+// A spot is what the player picks: a whole row, or one side of a pillar.
+// free = floor length left there at the end. A near miss is a spot the walls only just closed.
+function buildSpots(rows, s) {
+  const out = [];
+  rows.forEach((r, i) => {
+    const sides = r.p == null ? [[null, r.L, W - r.R]] : [['L', r.L, r.p], ['R', r.p + 1, W - r.R]];
+    sides.forEach(([side, a0, a1]) => {
+      if (a1 - a0 < 1) return;                       // no square to stand on even at the start
+      const x0 = side === 'R' ? a0 : a0 + s.dL, x1 = side === 'L' ? a1 : a1 - s.dR;
+      const fit = Math.floor(x1 + E) - Math.ceil(x0 - E);
+      out.push({ row: i, side, a0, a1, x0, x1, safe: fit >= 1, near: fit < 1 && x1 - x0 >= -E });
+    });
   });
-  return [...map.values()].map(s => {
-    const ok = s.cells.filter(c => c.safe);
-    s.safe = ok.length > 0;
-    s.cell = ok.length ? ok[Math.floor((ok.length - 1) / 2)] : s.cells[Math.floor((s.cells.length - 1) / 2)];
-    return s;
-  }).sort((a, b) => a.row - b.row || (a.side === 'R') - (b.side === 'R'));
+  return out;
 }
 
-function genLevel(n) {
-  const N = Math.min(5 + Math.floor((n - 1) / 2), 12), D = n <= 2 ? 1 : 2;
+// Difficulty for room n: number of rows and wall depth.
+function settings(n) {
+  return {
+    N: Math.min(12 + Math.floor((n - 1) / 2), 20),
+    D: n <= 2 ? 1 : 2,
+  };
+}
+
+function genLevel(n, rand = Math.random) {
+  const ri = (a, b) => a + Math.floor(rand() * (b - a + 1));
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const { N, D } = settings(n);
   const want = n <= 2 ? 2 : (n <= 5 ? ri(1, 2) : 1);
   const nP = n <= 2 ? 1 : (n <= 5 ? ri(1, 2) : ri(1, 3));
-  let backup = null;
-  for (let t = 0; t < 20000; t++) {
-    const M = ri(Math.max(-2 * D, 0), 2 * D);
-    const order = [...Array(N).keys()].sort(() => Math.random() - .5), pRows = order.slice(0, nP);
+  let best = null, bestScore = -1;
+  for (let t = 0; t < 30000 && bestScore < 100; t++) {
+    const M = ri(Math.max(-2 * D, 0), Math.min(2 * D, W - 3));
+    const pRows = shuffle([...Array(N).keys()]).slice(0, nP);
     const rows = [];
     for (let i = 0; i < N; i++) {
       let s;
       if (pRows.includes(i)) s = ri(Math.max(-2 * D, M - 4), M - 1);
-      else if (Math.random() < want / (N - nP)) s = M - 1 - (Math.random() < .25 ? 1 : 0);
+      else if (rand() < want / (N - nP)) s = M - 1 - (rand() < .25 ? 1 : 0);
       else s = M;
       s = Math.max(s, -2 * D);
       const L = ri(Math.max(-D, s - D), Math.min(D, s + D));
@@ -206,27 +267,65 @@ function genLevel(n) {
     pRows.forEach(i => { const r = rows[i], lo = Math.max(0, r.L + 1), hi = Math.min(W - 1, W - r.R - 2); if (hi >= lo) r.p = ri(lo, hi); });
     const s = simulate(rows);
     if (s.dL < 1 || s.dR < 1) continue;
-    const cells = buildCells(rows, s), spots = buildSpots(rows, cells), safe = spots.filter(p => p.safe);
+    const spots = buildSpots(rows, s), safe = spots.filter(p => p.safe);
     if (safe.length !== want) continue;
-    const room = { rows, ...s, cells, spots };
     const key = list => list.map(p => p.row + ':' + p.side).join();
-    const pillarsMatter = key(buildSpots(rows, buildCells(rows, simulate(rows, false))).filter(p => p.safe)) !== key(safe);
-    if (pillarsMatter) return room;
-    backup = backup || room;
+    const pillarsMatter = key(buildSpots(rows, simulate(rows, false)).filter(p => p.safe)) !== key(safe);
+    const near = spots.filter(p => p.near).length;
+    // prefer rooms where pillars change the answer
+    const score = (pillarsMatter ? 100 : 0) + (s.dL !== s.dR ? 5 : 0);
+    if (score > bestScore) { bestScore = score; best = { rows, ...s, spots, near, pillarsMatter }; }
   }
-  if (backup) return backup;
-  const rows = [{ L: 0, R: 0, p: 2 }, { L: 1, R: 1, p: null }, { L: 0, R: 1, p: null }, { L: 1, R: 1, p: null }, { L: 1, R: 0, p: null }];
-  const s = simulate(rows), cells = buildCells(rows, s);
-  return { rows, ...s, cells, spots: buildSpots(rows, cells) };
+  if (!best) {
+    const rows = [{ L: 0, R: 0, p: 2 }, { L: 1, R: 1, p: null }, { L: 0, R: 1, p: null }, { L: 1, R: 1, p: null }, { L: 1, R: 0, p: null }];
+    const s = simulate(rows);
+    best = { rows, ...s, spots: buildSpots(rows, s), near: 0, pillarsMatter: true };
+  }
+  best.cells = buildCells(best.rows, best);
+  return best;
 }
 
-// wall travel at animation time t (each wall stops at its own final distance)
+// The daily challenge: 5 rooms, the same for everyone on the same (UTC) day.
+const DAILY_LEVELS = [2, 4, 7, 10, 13];
+function dailyRooms(dateStr) {
+  return DAILY_LEVELS.map((lv, i) => genLevel(lv, mulberry32(hashStr('crushroom|' + dateStr + '|' + i))));
+}
+// ---- end generator ----
+
+// ---- game ----
+const $ = s => document.querySelector(s);
+const cv = $('#room'), ctx = cv.getContext('2d');
+const T = 3, U = 2 * T + W;            // wall columns drawn on each side; total grid width
+const KEY = 'crushroom.v1', DKEY = 'crushroom.daily.v1';
+const SITE = 'https://coybit.github.io/crush-room/';
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const C = {};
+const cs = getComputedStyle(document.documentElement);
+['ink','wall','wall-hi','wall-lo','floor','floor-seam','pillar','pillar-hi','amber','safe','danger'].forEach(k => C[k] = cs.getPropertyValue('--' + k).trim());
+
+const S = { mode: null, level: 1, idx: 0, score: 0, total: 0, room: null, phase: 'start', t0: 0, limit: 10, choice: null, t: 0, hover: null, shake: 0, flash: 0, lastTime: 0, timedOut: false, daily: null };
+let geo = { w: 0, h: 0, u: 0 };
+
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const fmt = t => t.toFixed(2) + 's';
+
+// The daily rooms change at midnight UTC, so the whole world plays the same 5 rooms.
+const todayUTC = () => new Date().toISOString().slice(0, 10);
+const dayNumber = d => Math.round((Date.parse(d + 'T00:00:00Z') - Date.parse('2026-10-10T00:00:00Z')) / 864e5) + 1;
+
+// Countdown per room: taller rooms get a little more time, later rooms a little less.
+const timeLimit = (room, n) => Math.max(8, Math.min(20, Math.round(6 + room.rows.length * 0.9 - n * 0.3)));
+const points = (left, limit, n) => Math.round((100 + 900 * left / limit) * (1 + (n - 1) * 0.15));
+
+// ---- drawing ----
 const wallsAt = t => ({ dL: Math.min(t, S.room.dL), dR: Math.min(t, S.room.dR) });
 
 function resize() {
   if (!S.room) return;
   const st = $('#stage'), N = S.room.rows.length;
-  const u = Math.max(18, Math.min(st.clientWidth / U, st.clientHeight / N, 44));
+  const u = Math.max(14, Math.min(st.clientWidth / U, st.clientHeight / N, 44));
   const w = u * U, h = u * N, dpr = window.devicePixelRatio || 1;
   cv.style.width = w + 'px'; cv.style.height = h + 'px';
   cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
@@ -234,14 +333,12 @@ function resize() {
   geo = { w, h, u };
   draw();
 }
-
 function cellFill(c, color, a) {
   const u = geo.u;
   ctx.globalAlpha = a; ctx.fillStyle = color;
   ctx.fillRect((T + c.col) * u, c.row * u, u, u);
   ctx.globalAlpha = 1;
 }
-// highlight a whole row, or the part of a pillar row on one side of the pillar
 function spotFill(sp, color, a) {
   const u = geo.u, r = S.room.rows[sp.row];
   const x0 = sp.side === 'R' ? T + r.p + 1 : 0, x1 = sp.side === 'L' ? T + r.p : U;
@@ -249,17 +346,27 @@ function spotFill(sp, color, a) {
   ctx.fillRect(x0 * u, sp.row * u, (x1 - x0) * u, u);
   ctx.globalAlpha = 1;
 }
-
+// the square the character stands on in a spot: the middle of the part that survives, if any
+function standCell(sp) {
+  const cells = S.room.cells.filter(c => c.row === sp.row && c.col >= sp.a0 && c.col < sp.a1);
+  const ok = cells.filter(c => c.safe), list = ok.length ? ok : cells;
+  return list[Math.floor((list.length - 1) / 2)];
+}
 function drawPlayer(c, w, alpha) {
+  if (!c) return;
   const u = geo.u, r = S.room.rows[c.row];
-  // part of this square not covered by a wall right now
-  const left = Math.max(c.col, r.L + w.dL), right = Math.min(c.col + 1, W - r.R - w.dR);
+  // the free stretch around this square right now (walls, and the pillar on a pillar side)
+  let lo = r.L + w.dL, hi = W - r.R - w.dR;
+  if (r.p != null) { if (c.col < r.p) hi = Math.min(hi, r.p); else lo = Math.max(lo, r.p + 1); }
+  const left = Math.max(c.col, lo), right = Math.min(c.col + 1, hi);
   const span = Math.max(0, right - left) * u;
+  // when squashed, the character ends up where the walls met, not inside a wall
+  const mid = lo <= hi ? Math.min(Math.max(c.col + .5, lo), hi) : (lo + hi) / 2;
   const base = u * .38;
   const rx = Math.max(1.5, Math.min(base, span / 2 - 1));
   const squash = rx / base;
   const ry = Math.min(u * .5, base / Math.sqrt(Math.max(squash, .05)));
-  const cx = (T + (span > 0 ? (left + right) / 2 : c.col + .5)) * u, cy = (c.row + .5) * u;
+  const cx = (T + (span > 0 ? (left + right) / 2 : mid)) * u, cy = (c.row + .5) * u;
   const crushed = squash < .85;
   ctx.globalAlpha = alpha;
   ctx.fillStyle = crushed ? C.danger : C.amber;
@@ -272,7 +379,6 @@ function drawPlayer(c, w, alpha) {
   }
   ctx.globalAlpha = 1;
 }
-
 function draw() {
   const { w, h, u } = geo, R = S.room;
   if (!R || !w) return;
@@ -281,7 +387,6 @@ function draw() {
   ctx.clearRect(0, 0, w, h);
   if (S.shake) ctx.translate((Math.random() - .5) * S.shake, (Math.random() - .5) * S.shake);
 
-  // floor: square tiles
   ctx.fillStyle = C.floor; ctx.fillRect(-20, -20, w + 40, h + 40);
   ctx.strokeStyle = C['floor-seam']; ctx.lineWidth = 1;
   for (let x = 1; x < U; x++) { ctx.beginPath(); ctx.moveTo(Math.round(x * u) + .5, 0); ctx.lineTo(Math.round(x * u) + .5, h); ctx.stroke(); }
@@ -293,7 +398,6 @@ function draw() {
     R.cells.forEach(c => c.safe && cellFill(c, C.safe, .45));
   }
 
-  // pillars
   const pad = Math.max(2, u * .08);
   R.rows.forEach((r, i) => {
     if (r.p == null) return;
@@ -303,7 +407,6 @@ function draw() {
     ctx.fillStyle = C['pillar-hi']; ctx.fillRect(x + pad + 2, y + pad + 2, Math.max(1, u * .16), u - 2 * pad - 4);
   });
 
-  // walls
   const dl = wl.dL * u, dr = wl.dR * u;
   R.rows.forEach((r, i) => {
     const y = i * u;
@@ -324,7 +427,6 @@ function draw() {
     ctx.stroke();
   });
 
-  // flash the pillars the walls stopped against
   if (S.flash > 0) {
     R.rows.forEach((r, i) => {
       if (r.p == null) return;
@@ -336,45 +438,154 @@ function draw() {
     });
   }
 
-  if (S.phase === 'choose' && S.hover) drawPlayer(S.hover.cell, wl, .4);
-  if (S.choice) drawPlayer(S.choice.cell, wl, 1);
+  if (S.phase === 'choose' && S.hover) drawPlayer(standCell(S.hover), wl, .4);
+  if (S.choice) drawPlayer(standCell(S.choice), wl, 1);
+  drawFx();
   ctx.restore();
 }
 
-function hud() {
-  $('#hudRoom').textContent = S.level;
-  $('#hudScore').textContent = S.score.toLocaleString();
+// ---- impact effects: dust where walls hit, splat or sparkles at the player ----
+// positions are in grid squares so they survive a resize
+let FX = [], POP = null;
+function drawFx() {
+  const u = geo.u;
+  FX.forEach(p => {
+    const a = Math.max(0, 1 - p.age / p.life);
+    if (a <= 0) return;
+    ctx.globalAlpha = a * (p.kind === 'dust' ? .7 : 1);
+    ctx.fillStyle = p.color;
+    const r = p.r * u * (p.kind === 'dust' ? 1 + p.age / p.life * 1.4 : 1);
+    ctx.beginPath();
+    if (p.kind === 'spark') { const x = p.x * u, y = p.y * u; ctx.moveTo(x, y - r); ctx.lineTo(x + r * .35, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r * .35, y); ctx.closePath(); }
+    else ctx.arc(p.x * u, p.y * u, r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  if (POP && POP.age < POP.life) {
+    const k = POP.age / POP.life, grow = Math.min(1, POP.age / 0.12);
+    const size = u * (1.3 + .5 * grow) * (k < .8 ? 1 : 1 - (k - .8) * 2);
+    ctx.save();
+    ctx.translate(POP.x * u, POP.y * u); ctx.rotate(POP.rot);
+    ctx.font = `${Math.round(size)}px ${getComputedStyle(document.documentElement).getPropertyValue('--display')}`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = Math.max(3, u * .18); ctx.strokeStyle = C.ink; ctx.lineJoin = 'round';
+    ctx.globalAlpha = k < .8 ? 1 : Math.max(0, 1 - (k - .8) * 5);
+    ctx.strokeText(POP.text, 0, 0); ctx.fillStyle = POP.color; ctx.fillText(POP.text, 0, 0);
+    ctx.restore();
+  }
+}
+function spawnImpactFx(safe) {
+  FX = []; POP = null;
+  if (reduceMotion) return;
+  const R = S.room, w = { dL: R.dL, dR: R.dR };
+  const dust = (x, y) => { for (let k = 0; k < 7; k++) FX.push({ kind: 'dust', x, y: y + Math.random(), vx: (Math.random() - .5) * 3, vy: (Math.random() - .5) * 3, r: .1 + Math.random() * .12, age: 0, life: .5 + Math.random() * .4, color: C['floor-seam'], drag: 4 }); };
+  R.rows.forEach((r, i) => {
+    const xl = r.L + w.dL, xr = W - r.R - w.dR;
+    if (xr - xl < E) dust(T + xl, i);
+    if (r.p != null && r.p - xl < E) dust(T + r.p, i);
+    if (r.p != null && xr - (r.p + 1) < E) dust(T + r.p + 1, i);
+  });
+  const c = S.choice && standCell(S.choice);
+  let cx = U / 2, cy = R.rows.length / 2;
+  if (c) {
+    const r = R.rows[c.row]; let lo = r.L + w.dL, hi = W - r.R - w.dR;
+    if (r.p != null) { if (c.col < r.p) hi = Math.min(hi, r.p); else lo = Math.max(lo, r.p + 1); }
+    cx = T + (lo <= hi ? Math.min(Math.max(c.col + .5, lo), hi) : (lo + hi) / 2); cy = c.row + .5;
+  }
+  if (safe) {
+    for (let k = 0; k < 12; k++) { const a = Math.random() * Math.PI * 2, v = 2 + Math.random() * 3; FX.push({ kind: 'spark', x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: .18 + Math.random() * .12, age: 0, life: .7, color: k % 2 ? C.safe : C.amber, drag: 3 }); }
+    POP = { text: 'PHEW!', x: Math.min(Math.max(cx, 3), U - 3), y: Math.max(cy - 1.2, 1), rot: -.08, color: C.safe, age: 0, life: 1.1 };
+  } else if (c) {
+    for (let k = 0; k < 26; k++) { const up = Math.random() < .5 ? -1 : 1, v = 3 + Math.random() * 6; FX.push({ kind: 'drop', x: cx, y: cy, vx: (Math.random() - .5) * 2.5, vy: up * v, r: .07 + Math.random() * .14, age: 0, life: .9 + Math.random() * .4, color: k % 3 ? C.danger : C.amber, drag: 2.2, grav: up * -2 }); }
+    POP = { text: 'SPLAT!', x: Math.min(Math.max(cx, 3.5), U - 3.5), y: Math.max(cy - 1.4, 1), rot: -.12, color: C.danger, age: 0, life: 1.3 };
+  } else {
+    POP = { text: "TIME'S UP", x: U / 2, y: R.rows.length / 2, rot: -.06, color: C.amber, age: 0, life: 1.3 };
+  }
+}
+function stepFx(dt) {
+  FX.forEach(p => { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; const d = Math.exp(-p.drag * dt); p.vx *= d; p.vy *= d; if (p.grav) p.vy += p.grav * dt; });
+  FX = FX.filter(p => p.age < p.life);
+  if (POP) POP.age += dt;
+}
+
+// ---- countdown ----
+function setClock(left) {
+  $('#hudTime').textContent = Math.max(0, left).toFixed(1) + 's';
+  const f = Math.max(0, left / S.limit);
+  const bar = $('#bar');
+  bar.style.transform = `scaleX(${f})`;
+  bar.classList.toggle('low', left <= 3);
+  $('#hudTime').classList.toggle('low', left <= 3);
 }
 function tick() {
   if (S.phase !== 'choose') return;
-  $('#hudTime').textContent = fmt((performance.now() - S.t0) / 1000);
+  const left = S.limit - (performance.now() - S.t0) / 1000;
+  setClock(left);
+  // the walls start to tremble in the last 3 seconds
+  const tremble = !reduceMotion && left <= 3 ? 1.5 + (3 - left) : 0;
+  if (tremble || S.shake) { S.shake = tremble; draw(); }
+  if (left <= 0) { timeUp(); return; }
   requestAnimationFrame(tick);
 }
 
-function startGame() {
-  S.level = 1; S.score = 0; S.total = 0;
-  hideAll();
-  startLevel();
+// ---- flow ----
+function hud() {
+  $('#hudRoomK').textContent = S.mode === 'daily' ? 'Daily room' : 'Room';
+  $('#hudRoom').textContent = S.mode === 'daily' ? `${S.idx + 1}/5` : S.level;
+  $('#hudScore').textContent = S.score.toLocaleString();
 }
-function startLevel() {
-  S.room = genLevel(S.level);
-  S.choice = null; S.t = 0; S.hover = null; S.shake = 0; S.flash = 0;
+function beginRoom(room, n) {
+  S.room = room; S.level = n;
+  S.choice = null; S.t = 0; S.hover = null; S.shake = 0; S.flash = 0; S.timedOut = false;
+  S.limit = timeLimit(room, n);
   S.phase = 'choose';
-  hud(); resize();
-  const n = S.room.spots.filter(s => s.safe).length;
-  $('#prompt').innerHTML = `Tap the row where you'll survive. <b>${n} safe spot${n > 1 ? 's' : ''}</b> in this room.`;
+  hideAll(); hud(); resize(); setClock(S.limit);
+  const k = room.spots.filter(s => s.safe).length;
+  $('#prompt').innerHTML = `Tap the row where you'll survive. <b>${k} safe spot${k > 1 ? 's' : ''}</b> in this room.`;
   cv.focus({ preventScroll: true });
   S.t0 = performance.now();
   requestAnimationFrame(tick);
 }
 
-function choose(c) {
-  if (S.phase !== 'choose' || !c) return;
-  const t = (performance.now() - S.t0) / 1000;
-  S.lastTime = t; S.total += t;
-  $('#hudTime').textContent = fmt(t);
-  S.choice = c; S.phase = 'closing'; S.hover = null;
-  $('#prompt').textContent = 'Here they come…';
+function startEndless() {
+  S.mode = 'endless'; S.score = 0; S.total = 0;
+  beginRoom(genLevel(1), 1);
+}
+
+// Daily progress is saved after every room, so reloading cannot replay a room.
+function dailyState() {
+  const d = todayUTC();
+  let st = load(DKEY, null);
+  if (!st || st.date !== d) st = { date: d, results: [] };
+  return st;
+}
+function startDaily() {
+  const st = dailyState();
+  S.mode = 'daily'; S.daily = st;
+  if (st.results.length >= 5) return showDaily();
+  S.dailyRooms = S.dailyRooms && S.dailyDate === st.date ? S.dailyRooms : dailyRooms(st.date);
+  S.dailyDate = st.date;
+  S.score = st.results.reduce((a, r) => a + r.pts, 0);
+  S.total = st.results.reduce((a, r) => a + r.time, 0);
+  S.idx = st.results.length;
+  beginRoom(S.dailyRooms[S.idx], DAILY_LEVELS[S.idx]);
+}
+
+function choose(sp) {
+  if (S.phase !== 'choose' || !sp) return;
+  S.lastTime = (performance.now() - S.t0) / 1000;
+  S.choice = sp;
+  closeWalls();
+}
+function timeUp() {
+  S.lastTime = S.limit; S.timedOut = true; S.choice = null;
+  closeWalls();
+}
+function closeWalls() {
+  S.phase = 'closing'; S.hover = null; S.shake = 0;
+  S.total += S.lastTime;
+  setClock(S.limit - S.lastTime);
+  $('#prompt').textContent = S.timedOut ? "Time's up!" : 'Here they come…';
   const tEnd = Math.max(S.room.dL, S.room.dR);
   const dur = reduceMotion ? 400 : 450 + tEnd * 280;
   const start = performance.now();
@@ -387,44 +598,73 @@ function choose(c) {
   };
   requestAnimationFrame(step);
 }
-
 function impact() {
-  const safe = S.choice.safe;
+  const safe = !!(S.choice && S.choice.safe);
   const start = performance.now();
+  try { if (navigator.vibrate) navigator.vibrate(safe ? 40 : [80, 40, 160]); } catch (e) {}
+  spawnImpactFx(safe);
+  if (!safe && !reduceMotion) { const f = $('#hitflash'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
+  let last = start;
   const anim = now => {
-    const p = (now - start) / 600;
-    S.shake = reduceMotion ? 0 : Math.max(0, 12 * (1 - p * 1.6));
-    S.flash = Math.max(0, 1 - p * .6);
+    const p = (now - start) / 1300;
+    stepFx((now - last) / 1000); last = now;
+    S.shake = reduceMotion ? 0 : Math.max(0, (safe ? 8 : 16) * (1 - p * 3));
+    S.flash = Math.max(0, 1 - p);
     draw();
-    if (p < 1) requestAnimationFrame(anim); else { S.shake = 0; draw(); }
+    if (p < 1) requestAnimationFrame(anim); else { S.shake = 0; FX = []; POP = null; draw(); }
   };
   requestAnimationFrame(anim);
   setTimeout(() => {
     S.phase = 'reveal'; draw();
-    $('#prompt').innerHTML = safe ? '<b>You fit.</b> Green spots were safe.' : '<b>Crushed.</b> Green spots were safe.';
-    setTimeout(() => safe ? survived() : gameOver(), 900);
-  }, 450);
+    const lead = safe ? '<b>You fit.</b>' : (S.timedOut ? "<b>Time's up.</b>" : '<b>Crushed.</b>');
+    $('#prompt').innerHTML = lead + ' Green spots were safe.';
+    setTimeout(() => roomOver(safe), 1000);
+  }, 600);
 }
 
-function survived() {
-  const pts = Math.round((50 + 950 * Math.exp(-S.lastTime / 5)) * (1 + (S.level - 1) * .15));
+function roomOver(safe) {
+  const left = S.limit - S.lastTime;
+  const pts = safe ? points(left, S.limit, S.level) : 0;
   S.score += pts; hud();
-  $('#safeTime').textContent = fmt(S.lastTime);
-  $('#safePts').textContent = '+' + pts.toLocaleString();
-  $('#safeScore').textContent = S.score.toLocaleString();
+  if (S.mode === 'daily') {
+    S.daily.results.push({ ok: safe, out: S.timedOut, time: +S.lastTime.toFixed(2), pts });
+    save(DKEY, S.daily);
+    if (S.daily.results.length >= 5) return showDaily();
+    roomCard(safe, pts);
+    $('#roomDots').hidden = false;
+    $('#roomDots').innerHTML = dotsHTML(S.daily.results);
+    $('#btnNext').textContent = `Room ${S.daily.results.length + 1} of 5`;
+    return;
+  }
+  if (!safe) return gameOver();
+  roomCard(true, pts);
+  $('#roomDots').hidden = true;
   $('#btnNext').textContent = 'Enter room ' + (S.level + 1);
-  show('#ovSafe'); $('#btnNext').focus();
+}
+function roomCard(safe, pts) {
+  const t = $('#roomTitle');
+  t.textContent = safe ? 'Safe!' : (S.timedOut ? "Time's up" : 'Crushed');
+  t.className = safe ? 'safe' : 'dead';
+  $('#roomTime').textContent = S.timedOut ? '—' : fmt(S.lastTime);
+  $('#roomPts').textContent = '+' + pts.toLocaleString();
+  $('#roomScore').textContent = S.score.toLocaleString();
+  show('#ovRoom'); $('#btnNext').focus();
+}
+function nextRoom() {
+  if (S.mode === 'daily') return startDaily();
+  beginRoom(genLevel(S.level + 1), S.level + 1);
 }
 
 function gameOver() {
   const rooms = S.level - 1;
-  const store = loadStore();
+  const store = load(KEY, { best: null, runs: [] });
   const run = { rooms, time: S.total, score: S.score };
   const isBest = !store.best || run.score > store.best.score;
   if (isBest) store.best = run;
   store.runs = [run, ...(store.runs || [])].slice(0, 5);
-  saveStore(store);
-  $('#overLine').innerHTML = `Flattened in room ${S.level}. You cleared <strong>${rooms}</strong> room${rooms === 1 ? '' : 's'}.`;
+  save(KEY, store);
+  $('#overTitle').textContent = S.timedOut ? "Time's up" : 'Crushed';
+  $('#overLine').innerHTML = `${S.timedOut ? 'The clock ran out' : 'Flattened'} in room ${S.level}. You cleared <strong>${rooms}</strong> room${rooms === 1 ? '' : 's'}.`;
   $('#overTime').textContent = fmt(S.total);
   $('#overRooms').textContent = rooms;
   $('#overScore').textContent = S.score.toLocaleString();
@@ -435,11 +675,93 @@ function gameOver() {
   show('#ovOver'); $('#btnAgain').focus();
 }
 
-function hideAll() { ['#ovStart', '#ovSafe', '#ovOver'].forEach(s => $(s).hidden = true); }
+// ---- daily results and sharing ----
+const mark = r => r.ok ? '🟩' : (r.out ? '⬛' : '🟥');
+function dotsHTML(results) {
+  let h = '';
+  for (let i = 0; i < 5; i++) {
+    const r = results[i];
+    const cls = !r ? 'todo' : (r.ok ? 'ok' : (r.out ? 'out' : 'bad'));
+    const label = !r ? `Room ${i + 1}: not played yet` : `Room ${i + 1}: ${r.ok ? 'safe in ' + fmt(r.time) : (r.out ? "time's up" : 'crushed')}`;
+    h += `<span class="dot ${cls}" title="${label}" aria-label="${label}">${r && r.ok ? r.time.toFixed(1) : (i + 1)}</span>`;
+  }
+  return h;
+}
+function shareText(st) {
+  const ok = st.results.filter(r => r.ok).length;
+  const pts = st.results.reduce((a, r) => a + r.pts, 0);
+  const time = st.results.reduce((a, r) => a + r.time, 0);
+  return `Crush Room Daily #${dayNumber(st.date)}\n${st.results.map(mark).join('')}\n${ok}/5 safe · ${pts.toLocaleString('en-US')} pts · ${time.toFixed(1)}s\n${SITE}`;
+}
+function showDaily() {
+  const st = S.daily || dailyState();
+  S.daily = st;
+  const ok = st.results.filter(r => r.ok).length;
+  $('#dailyTitle').textContent = `Daily #${dayNumber(st.date)}`;
+  $('#dailyDots').innerHTML = dotsHTML(st.results);
+  $('#dSurvived').textContent = `${ok}/5`;
+  $('#dScore').textContent = st.results.reduce((a, r) => a + r.pts, 0).toLocaleString();
+  $('#dTime').textContent = st.results.reduce((a, r) => a + r.time, 0).toFixed(1) + 's';
+  const text = shareText(st);
+  $('#shareText').textContent = text;
+  const enc = encodeURIComponent(text), encUrl = encodeURIComponent(SITE);
+  const short = encodeURIComponent(text.replace('\n' + SITE, ''));
+  $('#shWhatsapp').href = 'https://wa.me/?text=' + enc;
+  $('#shX').href = 'https://twitter.com/intent/tweet?text=' + enc;
+  $('#shTelegram').href = `https://t.me/share/url?url=${encUrl}&text=${short}`;
+  $('#shFacebook').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encUrl;
+  $('#shareNote').textContent = '';
+  show('#ovDaily'); $('#btnShare').focus();
+}
+async function share() {
+  const text = shareText(S.daily || dailyState());
+  const note = $('#shareNote');
+  if (navigator.share) {
+    try { await navigator.share({ text }); note.textContent = ''; return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(text); note.textContent = 'Copied. Paste it anywhere to share.'; }
+  catch (e) {
+    const r = document.createRange(); r.selectNodeContents($('#shareText'));
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    note.textContent = 'Selected. Copy it to share.';
+  }
+}
+function updateNextDaily() {
+  const now = new Date();
+  const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+  const s = Math.max(0, Math.floor((next - now) / 1000));
+  const p = n => String(n).padStart(2, '0');
+  $('#nextDaily').textContent = `${p(Math.floor(s / 3600))}:${p(Math.floor(s / 60) % 60)}:${p(s % 60)}`;
+  if (S.daily && S.daily.date !== todayUTC() && !$('#ovStart').hidden) homeScreen();
+}
+setInterval(updateNextDaily, 1000);
+
+function hideAll() { ['#ovStart', '#ovRoom', '#ovOver', '#ovDaily'].forEach(s => $(s).hidden = true); }
 function show(s) { hideAll(); $(s).hidden = false; }
 
-// which spot is under the pointer: the row, and in a pillar row the side of the pillar
-function cellFromEvent(e) {
+function homeScreen() {
+  const st = dailyState(); S.daily = st;
+  const n = st.results.length;
+  $('#dailyNo').textContent = '#' + dayNumber(st.date);
+  $('#dailyLine').innerHTML = n >= 5
+    ? `Done for today: <strong>${st.results.map(mark).join('')}</strong>. New rooms at midnight UTC.`
+    : n > 0 ? `You're on room ${n + 1} of 5. Everyone gets the same rooms today.`
+    : '5 rooms. Everyone gets the same rooms today.';
+  $('#btnDaily').textContent = n >= 5 ? "See today's result" : n > 0 ? `Continue: room ${n + 1} of 5` : "Play today's 5 rooms";
+  const store = load(KEY, { best: null });
+  $('#bestLine').innerHTML = store.best ? `Endless best: <strong>${store.best.score.toLocaleString()}</strong> points, ${store.best.rooms} rooms` : '';
+  S.phase = 'start'; S.mode = null;
+  S.room = dailyRooms('sample')[0]; S.t = 0; S.choice = null; S.hover = null; S.score = 0;
+  S.limit = timeLimit(S.room, 1); setClock(S.limit);
+  $('#hudRoomK').textContent = 'Room'; $('#hudRoom').textContent = '1'; $('#hudScore').textContent = '0';
+  $('#prompt').innerHTML = '&nbsp;';
+  resize();
+  show('#ovStart');
+}
+
+// ---- input ----
+function spotFromEvent(e) {
   const b = cv.getBoundingClientRect(), u = b.width / U, R = S.room;
   const row = Math.floor((e.clientY - b.top) / u);
   if (row < 0 || row >= R.rows.length) return null;
@@ -447,24 +769,27 @@ function cellFromEvent(e) {
   const side = r.p == null ? null : ((e.clientX - b.left) / u - T < r.p + .5 ? 'L' : 'R');
   return R.spots.find(s => s.row === row && s.side === side) || null;
 }
-cv.addEventListener('pointermove', e => { if (S.phase !== 'choose' || e.pointerType === 'touch') return; const c = cellFromEvent(e); if (c !== S.hover) { S.hover = c; draw(); } });
+cv.addEventListener('pointermove', e => { if (S.phase !== 'choose' || e.pointerType === 'touch') return; const c = spotFromEvent(e); if (c !== S.hover) { S.hover = c; draw(); } });
 cv.addEventListener('pointerleave', () => { if (S.phase === 'choose') { S.hover = null; draw(); } });
-cv.addEventListener('click', e => { if (S.phase === 'choose') choose(cellFromEvent(e)); });
+cv.addEventListener('click', e => { if (S.phase === 'choose') choose(spotFromEvent(e)); });
 cv.addEventListener('keydown', e => {
   if (S.phase !== 'choose') return;
   const sp = S.room.spots, n = sp.length, i = sp.indexOf(S.hover);
   if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); S.hover = sp[(i + 1) % n]; draw(); }
-  else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); S.hover = sp[i <= 0 ? n - 1 : i - 1]; draw(); } else if ((e.key === 'Enter' || e.key === ' ') && S.hover) { e.preventDefault(); choose(S.hover); }
+  else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); S.hover = sp[i <= 0 ? n - 1 : i - 1]; draw(); }
+  else if ((e.key === 'Enter' || e.key === ' ') && S.hover) { e.preventDefault(); choose(S.hover); }
 });
-$('#btnStart').addEventListener('click', startGame);
-$('#btnAgain').addEventListener('click', startGame);
-$('#btnNext').addEventListener('click', () => { S.level++; hideAll(); startLevel(); });
+$('#btnDaily').addEventListener('click', startDaily);
+$('#btnEndless').addEventListener('click', startEndless);
+$('#btnAgain').addEventListener('click', startEndless);
+$('#btnNext').addEventListener('click', nextRoom);
+$('#btnShare').addEventListener('click', share);
+$('#btnHome1').addEventListener('click', homeScreen);
+$('#btnHome2').addEventListener('click', homeScreen);
 window.addEventListener('resize', resize);
 
-// opening state: a sample room behind the start card
-const store = loadStore();
-$('#bestLine').innerHTML = store.best ? `Best: <strong>${store.best.score.toLocaleString()}</strong> points, ${store.best.rooms} rooms, ${fmt(store.best.time)}` : 'No runs yet on this device.';
-S.room = genLevel(1); hud(); resize();
+homeScreen();
+updateNextDaily();
 })();
 </script>
 
